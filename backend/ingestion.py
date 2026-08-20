@@ -7,15 +7,77 @@ from sentence_transformers import SentenceTransformer
 import argparse
 import time
 
-def semantic_chunking(text, max_tokens=100, overlap=20):
-    # Extremely simple token-approximate chunking with overlap
-    words = text.split()
-    chunks = []
-    for i in range(0, len(words), max_tokens - overlap):
-        chunk = " ".join(words[i:i + max_tokens])
-        if chunk:
-            chunks.append(chunk)
-    return chunks
+import re
+
+def recursive_character_split(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> list[str]:
+    """
+    Advanced chunking: splits by paragraphs, then sentences, then words to respect semantics.
+    """
+    separators = ["\n\n", "\n", ". ", " ", ""]
+    
+    def split_recursively(text_to_split: str, sep_index: int) -> list[str]:
+        if len(text_to_split) <= chunk_size:
+            return [text_to_split]
+            
+        separator = separators[sep_index] if sep_index < len(separators) else ""
+        
+        # Split the text
+        if separator:
+            splits = text_to_split.split(separator)
+        else:
+            splits = list(text_to_split)
+            
+        # Merge splits
+        chunks = []
+        current_chunk = ""
+        
+        for s in splits:
+            part = s + (separator if s and separator else "")
+            if len(current_chunk) + len(part) <= chunk_size:
+                current_chunk += part
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                # If a single split is still too large, we recurse on it
+                if len(part) > chunk_size and sep_index + 1 < len(separators):
+                    sub_chunks = split_recursively(part, sep_index + 1)
+                    chunks.extend(sub_chunks)
+                    current_chunk = ""
+                else:
+                    current_chunk = part
+                    
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+            
+        return chunks
+
+    # Generate initial chunks
+    raw_chunks = split_recursively(text, 0)
+    
+    # Handle Overlap
+    final_chunks = []
+    for i, rc in enumerate(raw_chunks):
+        if not rc.strip(): continue
+        
+        if i == 0:
+            final_chunks.append(rc)
+        else:
+            # Prepend overlap from previous chunk
+            prev = final_chunks[-1]
+            overlap_text = prev[-chunk_overlap:] if len(prev) > chunk_overlap else prev
+            # Try to find a clean break for the overlap (e.g. space)
+            space_idx = overlap_text.find(" ")
+            if space_idx != -1 and space_idx < len(overlap_text) - 1:
+                overlap_text = overlap_text[space_idx+1:]
+                
+            merged = (overlap_text + " " + rc).strip()
+            # If merging makes it way too big, just use rc. Otherwise, use merged.
+            if len(merged) > chunk_size + chunk_overlap:
+                final_chunks.append(rc)
+            else:
+                final_chunks.append(merged)
+                
+    return final_chunks
 
 def ingest_data(language="hi", max_samples=1000, output_dir="../data"):
     print(f"Loading dataset for {language}...")
@@ -51,14 +113,17 @@ def ingest_data(language="hi", max_samples=1000, output_dir="../data"):
         if not text:
             continue
             
-        chunks = semantic_chunking(text, max_tokens=60, overlap=15)
+        chunks = recursive_character_split(text, chunk_size=300, chunk_overlap=30)
         for chunk_idx, chunk in enumerate(chunks):
             documents.append(chunk)
             metadata.append({
                 "doc_id": doc_id,
                 "chunk_idx": chunk_idx,
                 "language": language,
-                "source": "MSMARCO-XI"
+                "source": "ai4bharat/MSMARCO-XI",
+                "length": len(chunk),
+                "is_first_chunk": chunk_idx == 0,
+                "is_last_chunk": chunk_idx == len(chunks) - 1
             })
         count += 1
         

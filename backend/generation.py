@@ -26,10 +26,9 @@ async def generate_answer(query: str, context: str = "") -> str:
         return "ताज महल उत्तर प्रदेश के आगरा में स्थित है। (Mock Answer - API Key Missing)"
         
     if context and context.strip():
-        prompt = f"""You are a fast, intelligent, and helpful voice AI assistant.
-Answer the user's question clearly, concisely, and accurately based on the context if relevant.
-If the query is a greeting, polite conversation, or general query, respond naturally and politely.
-Match the language of the user's question (Hindi, English, Hinglish, etc.). Keep the response concise for voice output (1-3 sentences).
+        prompt = f"""You are a fast, intelligent, and strict voice AI assistant.
+Answer the user's question clearly and concisely based ONLY on the provided context.
+ANTI-HALLUCINATION PROTOCOL: If the answer is NOT explicitly found in the context, you MUST reply with exactly: "ERR_NO_CONTEXT: मुझे इस बारे में जानकारी नहीं है।" (or equivalent in the requested language). Do not guess.
 
 Context:
 {context}
@@ -37,10 +36,9 @@ Context:
 Question: {query}
 Answer:"""
     else:
-        prompt = f"""You are a fast, intelligent, and helpful voice AI assistant.
-Answer the user's question clearly, politely, and concisely. Keep the response concise for voice output (1-3 sentences).
-If the query is a greeting or general conversation, respond warmly and naturally.
-Match the language of the user's question (Hindi, English, Hinglish, etc.).
+        prompt = f"""You are a fast, intelligent voice AI assistant.
+Answer the user's question clearly and concisely.
+If the query is a greeting, respond warmly.
 
 Question: {query}
 Answer:"""

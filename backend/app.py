@@ -73,15 +73,32 @@ async def process_voice_rag(audio: UploadFile = File(...)):
             generation_latency_ms=0.0
         )
         
-    # 4. Retrieval
+    # 4. Check Cache
+    from backend.cache import semantic_cache
+    cached_ans, cached_ctx = semantic_cache.get(transcript)
+    if cached_ans:
+        return RAGResponse(
+            transcript=transcript,
+            context=cached_ctx,
+            answer=cached_ans,
+            latency_ms=round((time.time() - start_time) * 1000, 2),
+            stt_latency_ms=stt_latency,
+            retrieval_latency_ms=0.0,
+            generation_latency_ms=0.0
+        )
+        
+    # 5. Retrieval
     ret_start = time.time()
     context = await get_context(transcript)
     ret_latency = (time.time() - ret_start) * 1000
     
-    # 5. Generation
+    # 6. Generation
     gen_start = time.time()
     answer = await generate_answer(transcript, context)
     gen_latency = (time.time() - gen_start) * 1000
+    
+    # Save to cache
+    semantic_cache.set(transcript, answer, context)
     
     # Calculate Latency
     total_latency = (time.time() - start_time) * 1000
@@ -117,6 +134,20 @@ async def process_chat_rag(req: ChatRequest):
             latency_ms=(time.time() - start_time) * 1000
         )
         
+    # 4. Check Cache
+    from backend.cache import semantic_cache
+    cached_ans, cached_ctx = semantic_cache.get(query)
+    if cached_ans:
+        return RAGResponse(
+            transcript=query,
+            context=cached_ctx,
+            answer=cached_ans,
+            latency_ms=round((time.time() - start_time) * 1000, 2),
+            stt_latency_ms=0.0,
+            retrieval_latency_ms=0.0,
+            generation_latency_ms=0.0
+        )
+        
     # Retrieval
     ret_start = time.time()
     context = await get_context(query)
@@ -126,6 +157,9 @@ async def process_chat_rag(req: ChatRequest):
     gen_start = time.time()
     answer = await generate_answer(query, context)
     gen_latency = (time.time() - gen_start) * 1000
+    
+    # Save to cache
+    semantic_cache.set(query, answer, context)
     
     total_latency = (time.time() - start_time) * 1000
     
