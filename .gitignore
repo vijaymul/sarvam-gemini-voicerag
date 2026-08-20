@@ -1,0 +1,36 @@
+# Python virtual environments
+venv/
+venv2/
+ENV/
+env/
+.venv/
+
+# Environment Variables & Secrets (CRITICAL: Do NOT commit!)
+.env
+.env.local
+.env.*.local
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local FAISS indices and raw datasets
+data/
+*.faiss
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Antigravity artifacts & logs
+.gemini/
+.system_generated/
+scratch/
