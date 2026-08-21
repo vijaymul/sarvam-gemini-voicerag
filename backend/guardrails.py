@@ -20,6 +20,14 @@ def check_input_safety(query: str) -> bool:
             return False
     return True
 
+def check_is_greeting(query: str) -> str:
+    """Returns a canned response for greetings to save 500ms LLM latency."""
+    q = query.lower().strip()
+    greetings = ["hello", "hi", "hey", "how are you", "namaste", "नमस्ते", "hello!", "hi!"]
+    if any(q.startswith(g) or q == g for g in greetings):
+        return "Hello! I am ready to help you with your questions."
+    return ""
+
 def check_hallucination(answer: str, context: str) -> bool:
     """
     Very lightweight hallucination check. 

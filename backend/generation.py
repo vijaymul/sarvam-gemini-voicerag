@@ -1,6 +1,5 @@
 import os
 import asyncio
-import json
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -21,42 +20,42 @@ if GEMINI_API_KEY and GEMINI_API_KEY != "your_gemini_api_key_here":
 else:
     model = None
 
-async def _call_gemini_with_retry(prompt: str, max_retries: int = 2) -> dict:
-    """Orchestration Harness: Executes LLM call with structured output constraints and retries."""
+async def _call_gemini_with_retry(prompt: str, max_retries: int = 2) -> str:
+    """Orchestration Harness: Executes LLM call with retries and ultra-low timeout."""
     if model is None and not GEMINI_API_KEY:
-        return {"answer": "ताज महल उत्तर प्रदेश के आगरा में स्थित है। (Mock Answer - API Key Missing)", "is_grounded": True}
+        return "ताज महल उत्तर प्रदेश के आगरा में स्थित है। (Mock Answer - API Key Missing)"
         
     gen_config = genai.types.GenerationConfig(
         candidate_count=1,
-        temperature=0.1,
-        max_output_tokens=60, # Extremely tight to speed up TTFT and total latency
-        response_mime_type="application/json"
+        temperature=0.0,
+        max_output_tokens=50 # Extremely tight to speed up TTFT
     )
     
     last_err = None
     for attempt in range(max_retries):
         try:
-            # Aggressive timeout to ensure we fail fast and fallback
+            # Aggressive timeout to ensure we fail fast
             res = await asyncio.wait_for(
                 model.generate_content_async(prompt, generation_config=gen_config),
-                timeout=2.0
+                timeout=1.5
             )
             if hasattr(res, 'text') and res.text:
-                return json.loads(res.text.strip())
+                return res.text.strip()
         except Exception as e:
             last_err = e
             print(f"Generation attempt {attempt+1} failed: {e}")
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.01)
             
     print(f"Gemini generation failed after {max_retries} attempts: {last_err}")
-    return {"answer": "Error generating response. Please check backend logs.", "is_grounded": False}
+    return "Error generating response. Please check backend logs."
 
 async def generate_answer(query: str, context: str = "") -> str:
-    """Generates the final answer using the structured orchestration harness."""
+    """Generates the final answer using the orchestration harness."""
     
-    # 1. Structure the prompt to ask for strictly JSON to satisfy harness requirements
-    prompt = f"""You are a fast, intelligent voice AI assistant.
-Respond strictly in JSON: {{"answer": "concise answer", "is_grounded": boolean (true if context supports it or if it's a general greeting, false if you are hallucinating or guessing)}}
+    # 1. Structure the prompt to fail fast on hallucinations
+    prompt = f"""You are a helpful, fast voice AI.
+Answer the Question using ONLY the Context. Be extremely concise (1-2 sentences).
+If the Context does not contain the answer, reply EXACTLY with: ERR_NO_CONTEXT
 
 Context:
 {context}
@@ -64,15 +63,10 @@ Context:
 Question: {query}"""
 
     # 2. Execute orchestrated call
-    data = await _call_gemini_with_retry(prompt)
+    ans = await _call_gemini_with_retry(prompt)
     
     # 3. Post-Generation Guardrail Check
-    if not data.get("is_grounded", True):
-        # Fail safe if the model flags its own hallucination
+    if "ERR_NO_CONTEXT" in ans or not ans:
         return "मुझे इस बारे में जानकारी नहीं है। (I do not have enough context to answer this safely)."
-        
-    ans = data.get("answer", "")
-    if not ans:
-        return "नमस्ते! मैं आपकी क्या सहायता कर सकता हूँ?"
         
     return ans

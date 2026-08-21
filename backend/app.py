@@ -87,6 +87,20 @@ async def process_voice_rag(audio: UploadFile = File(...)):
             generation_latency_ms=0.0
         )
         
+    # 4.5 Check Greeting
+    from backend.guardrails import check_is_greeting
+    greeting = check_is_greeting(transcript)
+    if greeting:
+        return RAGResponse(
+            transcript=transcript,
+            context="Greeting bypass (0ms latency)",
+            answer=greeting,
+            latency_ms=round((time.time() - start_time) * 1000, 2),
+            stt_latency_ms=round(stt_latency, 2),
+            retrieval_latency_ms=0.0,
+            generation_latency_ms=0.0
+        )
+        
     # 5. Retrieval
     ret_start = time.time()
     context = await get_context(transcript)
@@ -142,6 +156,20 @@ async def process_chat_rag(req: ChatRequest):
             transcript=query,
             context=cached_ctx,
             answer=cached_ans,
+            latency_ms=round((time.time() - start_time) * 1000, 2),
+            stt_latency_ms=0.0,
+            retrieval_latency_ms=0.0,
+            generation_latency_ms=0.0
+        )
+        
+    # 4.5 Check Greeting
+    from backend.guardrails import check_is_greeting
+    greeting = check_is_greeting(query)
+    if greeting:
+        return RAGResponse(
+            transcript=query,
+            context="Greeting bypass (0ms latency)",
+            answer=greeting,
             latency_ms=round((time.time() - start_time) * 1000, 2),
             stt_latency_ms=0.0,
             retrieval_latency_ms=0.0,
