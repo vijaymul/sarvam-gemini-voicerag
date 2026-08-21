@@ -43,7 +43,7 @@ def run_analytics(url="http://127.0.0.1:8000/api/chat-rag"):
     p100 = np.max(latencies)
     
     print("\n" + "="*40)
-    print("🚀 LATENCY ANALYTICS REPORT")
+    print("LATENCY ANALYTICS REPORT")
     print("="*40)
     print(f"Total Queries: {len(latencies)}")
     print(f"P50 Latency:  {p50:.2f} ms")
@@ -52,9 +52,9 @@ def run_analytics(url="http://127.0.0.1:8000/api/chat-rag"):
     print("="*40)
     
     if p50 < 200:
-        print("✅ SUCCESS: P50 is under 200ms target!")
+        print("[SUCCESS] P50 is under 200ms target!")
     else:
-        print("⚠️ WARNING: P50 exceeds 200ms target. (Expected without cache, run again to see cache effect)")
+        print("[WARNING] P50 exceeds 200ms target.")
 
 if __name__ == "__main__":
     run_analytics()

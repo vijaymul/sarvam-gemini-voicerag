@@ -334,7 +334,16 @@ function displayMetrics(data) {
     setPipelineStep(stepRet, `${(data.retrieval_latency_ms || 0).toFixed(1)} ms`, false, true);
     setPipelineStep(stepGen, `${(data.generation_latency_ms || 0).toFixed(1)} ms`, false, true);
     
-    totalLatencyBadge.textContent = `⚡ ${(data.latency_ms || 0).toFixed(1)} ms Total`;
+    const ragLatency = (data.retrieval_latency_ms || 0) + (data.generation_latency_ms || 0);
+    totalLatencyBadge.innerHTML = `⚡ <strong>${ragLatency.toFixed(1)} ms</strong> RAG Latency <br><span style="font-size: 0.7em; opacity: 0.8">(${(data.latency_ms || 0).toFixed(1)} ms Full Round-Trip)</span>`;
+    
+    if (ragLatency < 200) {
+        totalLatencyBadge.style.color = 'var(--neon-cyan)';
+        totalLatencyBadge.style.boxShadow = '0 0 10px var(--neon-cyan)';
+    } else {
+        totalLatencyBadge.style.color = 'var(--neon-amber)';
+        totalLatencyBadge.style.boxShadow = 'none';
+    }
 }
 
 function showLoading(msg) {
