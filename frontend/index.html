@@ -211,6 +211,36 @@
             filter: drop-shadow(0 4px 20px rgba(56, 189, 248, 0.25));
         }
 
+        .fullscreen-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(0, 240, 255, 0.15);
+            color: var(--neon-cyan);
+            border-color: var(--neon-cyan);
+            transform: scale(1.05);
+        }
+
+        .fullscreen-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
         .app-tagline {
             font-size: 0.96rem;
             color: var(--text-secondary);
@@ -865,6 +895,11 @@
         
         <!-- Header Branding -->
         <header class="app-header">
+            <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen" onclick="toggleFullScreen()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                </svg>
+            </button>
             <div class="hud-badge">
                 <span class="cyber-dot"></span>
                 <span>Sarvam STT &bull; Gemini 3.5 &bull; FAISS RAG</span>
