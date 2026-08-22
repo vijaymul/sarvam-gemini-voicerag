@@ -7,8 +7,7 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# We use the absolute fastest model available on the Gemini API to hit <200ms
-PRIMARY_MODEL_NAME = 'gemini-1.5-flash-8b'
+PRIMARY_MODEL_NAME = 'gemini-2.5-flash'
 
 if GEMINI_API_KEY and GEMINI_API_KEY != "your_gemini_api_key_here":
     genai.configure(api_key=GEMINI_API_KEY)
@@ -28,7 +27,7 @@ async def _call_gemini_with_retry(prompt: str, max_retries: int = 2) -> str:
     gen_config = genai.types.GenerationConfig(
         candidate_count=1,
         temperature=0.0,
-        max_output_tokens=50 # Extremely tight to speed up TTFT
+        max_output_tokens=256
     )
     
     last_err = None
@@ -37,8 +36,17 @@ async def _call_gemini_with_retry(prompt: str, max_retries: int = 2) -> str:
             # Aggressive timeout to ensure we fail fast
             res = await asyncio.wait_for(
                 model.generate_content_async(prompt, generation_config=gen_config),
-                timeout=1.5
+                timeout=4.0
             )
+            if res and res.candidates:
+                candidate = res.candidates[0]
+                # Extract text parts
+                text_parts = [
+                    part.text for part in candidate.content.parts 
+                    if hasattr(part, "text") and part.text
+                ]
+                if text_parts:
+                    return "".join(text_parts).strip()
             if hasattr(res, 'text') and res.text:
                 return res.text.strip()
         except Exception as e:

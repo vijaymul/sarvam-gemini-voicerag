@@ -21,10 +21,14 @@ def check_input_safety(query: str) -> bool:
     return True
 
 def check_is_greeting(query: str) -> str:
-    """Returns a canned response for greetings to save 500ms LLM latency."""
-    q = query.lower().strip()
-    greetings = ["hello", "hi", "hey", "how are you", "namaste", "नमस्ते", "hello!", "hi!"]
-    if any(q.startswith(g) or q == g for g in greetings):
+    """Returns a canned response for greetings to save LLM latency if the query is solely a greeting."""
+    q = re.sub(r"[^\w\s]", "", query).lower().strip()
+    greetings = {
+        "hello", "hi", "hey", "how are you", "namaste", "namaskar",
+        "नमस्ते", "नमस्कार", "hello there", "hi there", "hey there",
+        "good morning", "good afternoon", "good evening"
+    }
+    if q in greetings:
         return "Hello! I am ready to help you with your questions."
     return ""
 
