@@ -27,20 +27,18 @@ async def _call_gemini_with_retry(prompt: str, max_retries: int = 2) -> str:
     gen_config = genai.types.GenerationConfig(
         candidate_count=1,
         temperature=0.0,
-        max_output_tokens=256
+        max_output_tokens=1024
     )
     
     last_err = None
     for attempt in range(max_retries):
         try:
-            # Aggressive timeout to ensure we fail fast
             res = await asyncio.wait_for(
-                model.generate_content_async(prompt, generation_config=gen_config),
-                timeout=4.0
+                asyncio.to_thread(model.generate_content, prompt, generation_config=gen_config),
+                timeout=5.0
             )
             if res and res.candidates:
                 candidate = res.candidates[0]
-                # Extract text parts
                 text_parts = [
                     part.text for part in candidate.content.parts 
                     if hasattr(part, "text") and part.text
@@ -52,29 +50,31 @@ async def _call_gemini_with_retry(prompt: str, max_retries: int = 2) -> str:
         except Exception as e:
             last_err = e
             print(f"Generation attempt {attempt+1} failed: {e}")
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.05)
             
     print(f"Gemini generation failed after {max_retries} attempts: {last_err}")
     return "Error generating response. Please check backend logs."
 
 async def generate_answer(query: str, context: str = "") -> str:
     """Generates the final answer using the orchestration harness."""
-    
-    # 1. Structure the prompt to fail fast on hallucinations
-    prompt = f"""You are a helpful, fast voice AI.
-Answer the Question using ONLY the Context. Be extremely concise (1-2 sentences).
-If the Context does not contain the answer, reply EXACTLY with: ERR_NO_CONTEXT
+    if context and context.strip():
+        prompt = f"""You are a helpful, fast and accurate AI voice assistant.
+Answer the question concisely in 1-2 sentences in the same language as the question.
+Use the provided Context as your primary factual source.
 
 Context:
 {context}
 
 Question: {query}"""
+    else:
+        prompt = f"""You are a helpful, fast and accurate AI voice assistant.
+Answer the question concisely in 1-2 sentences in the same language as the question.
+
+Question: {query}"""
 
     # 2. Execute orchestrated call
     ans = await _call_gemini_with_retry(prompt)
-    
-    # 3. Post-Generation Guardrail Check
-    if "ERR_NO_CONTEXT" in ans or not ans:
-        return "मुझे इस बारे में जानकारी नहीं है। (I do not have enough context to answer this safely)."
+    if not ans or "ERR_NO_CONTEXT" in ans:
+        return "I'm ready to help. Could you please specify your question?"
         
     return ans
